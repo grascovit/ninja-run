@@ -9,6 +9,7 @@ public class Player : MonoBehaviour {
 	[SerializeField]
 	private float movementSpeed;
 	private float countDownTimer = 3.0f;
+	private bool sliding;
 
 	void Start() {
 		rigidBody = GetComponent<Rigidbody2D>();
@@ -16,12 +17,33 @@ public class Player : MonoBehaviour {
 		StartCoroutine("Countdown", countDownTimer);
 	}
 
+	void Update() {
+		HandleInput();
+	}
+
 	void FixedUpdate() {
 		HandleMovement();
+		ResetValues();
 	}
 
 	private void HandleMovement() {
-		rigidBody.velocity = new Vector2(movementSpeed, rigidBody.velocity.y);
+		AnimatorStateInfo animatorStateInfo = animator.GetCurrentAnimatorStateInfo(0);
+
+		if (animator.GetBool ("running")) {
+			rigidBody.velocity = new Vector2 (movementSpeed, rigidBody.velocity.y);
+		}
+
+		if (sliding && !animatorStateInfo.IsName("Slide")) {
+			animator.SetBool("sliding", true);
+		} else if (!animatorStateInfo.IsName("Slide")) {
+			animator.SetBool("sliding", false);
+		}
+	}
+
+	private void HandleInput() {
+		if (Input.GetKey(KeyCode.DownArrow)) {
+			sliding = true;
+		}
 	}
 
 	private IEnumerator Countdown(int time) {
@@ -31,5 +53,9 @@ public class Player : MonoBehaviour {
 		}
 
 		animator.SetBool("running", true);
+	}
+
+	private void ResetValues() {
+		sliding = false;
 	}
 }
