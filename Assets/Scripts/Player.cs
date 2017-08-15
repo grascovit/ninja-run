@@ -5,7 +5,6 @@ using UnityEngine;
 public class Player : MonoBehaviour {
 	private Rigidbody2D rigidBody;
 	private Animator animator;
-
 	[SerializeField]
 	private float movementSpeed;
 	private float countDownTimer = 3.0f;
@@ -20,8 +19,13 @@ public class Player : MonoBehaviour {
     private bool jumping;
     [SerializeField]
     private float jumpForce;
+    private float fingerStartTime = 0.0f;
+    private Vector2 fingerStartPosition = Vector2.zero;
+    private bool isSwipe = false;
+    private float minSwipeDistance = 50.0f;
+    private float maxSwipeTime = 0.5f;
 
-	void Start() {
+    void Start() {
 		rigidBody = GetComponent<Rigidbody2D>();
 		animator = GetComponent<Animator>();
 		StartCoroutine("Countdown", countDownTimer);
@@ -46,7 +50,7 @@ public class Player : MonoBehaviour {
         }
 
 		if (animator.GetBool ("running")) {
-			rigidBody.velocity = new Vector2 (movementSpeed, rigidBody.velocity.y);
+			rigidBody.velocity = new Vector2(movementSpeed, rigidBody.velocity.y);
 		}
 
         if (isGrounded && jumping) {
@@ -62,14 +66,9 @@ public class Player : MonoBehaviour {
 		}
 	}
 
-	private void HandleInput() {
-		if (Input.GetKey(KeyCode.DownArrow)) {
-			sliding = true;
-		}
-
-        if (Input.GetKey(KeyCode.UpArrow)) {
-            jumping = true;
-        }
+    private void HandleInput() {
+        HandleKeyPress();
+        HandleSwipe();
     }
 
 	private IEnumerator Countdown(int time) {
@@ -109,6 +108,53 @@ public class Player : MonoBehaviour {
             animator.SetLayerWeight(1, 1);
         } else {
             animator.SetLayerWeight(1, 0);
+        }
+    }
+
+    private void HandleKeyPress() {
+        if (Input.GetKey(KeyCode.DownArrow)) {
+            sliding = true;
+        }
+
+        if (Input.GetKey(KeyCode.UpArrow)) {
+            jumping = true;
+        }
+    }
+
+    private void HandleSwipe() {
+        if (Input.touchCount > 0) {
+            foreach (Touch touch in Input.touches) {
+                switch (touch.phase) {
+                    case TouchPhase.Began:
+                        isSwipe = true;
+                        fingerStartTime = Time.time;
+                        fingerStartPosition = touch.position;
+                        break;
+                    case TouchPhase.Canceled:
+                        isSwipe = false;
+                        break;
+                    case TouchPhase.Ended:
+                        float gestureTime = Time.time - fingerStartTime;
+                        float gestureDistance = (touch.position - fingerStartPosition).magnitude;
+                        if (isSwipe && gestureTime < maxSwipeTime && gestureDistance > minSwipeDistance) {
+                            Vector2 direction = touch.position - fingerStartPosition;
+                            Vector2 swipeType = Vector2.zero;
+
+                            if (Mathf.Abs(direction.x) <= Mathf.Abs(direction.y)) {
+                                swipeType = Vector2.up * Mathf.Sign(direction.y);
+                            }
+
+                            if (swipeType.y != 0.0f) {
+                                if (swipeType.y > 0.0f) {
+                                    jumping = true;
+                                } else {
+                                    sliding = true;
+                                }
+                            }
+                        }
+                    break;
+                }
+            }
         }
     }
 }
